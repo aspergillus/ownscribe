@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>meetingnotes</title>
+<style>
+body{font:16px system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem;color:#222}
+pre{white-space:pre-wrap;background:#f5f5f5;padding:1rem;border-radius:8px}
+@media(prefers-color-scheme:dark){body{background:#111;color:#eee}pre{background:#1e1e1e}}
+</style></head><body>
+<h1>meetingnotes</h1>
+<form id="f"><input type="file" name="file" accept="audio/*,video/*" required> <button>Transcribe &amp; summarize</button></form>
+<p id="s"></p>
+<h2>Summary</h2><pre id="sum">—</pre>
+<h2>Transcript</h2><pre id="tx">—</pre>
+<script>
+f.onsubmit=async e=>{e.preventDefault();s.textContent="Processing… (first run downloads the Whisper model)";
+ const r=await fetch("/process",{method:"POST",body:new FormData(f)});
+ if(!r.ok){s.textContent="Error: "+(await r.text());return}
+ const d=await r.json();s.textContent="Done.";sum.textContent=d.summary;tx.textContent=d.transcript}
+</script></body></html>
