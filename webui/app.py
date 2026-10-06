@@ -1,6 +1,7 @@
 """Minimal web UI for ownscribe: upload audio -> transcript + summary. Run: uvicorn webui.app:app"""
 import asyncio
 import glob
+import hashlib
 import logging
 import os
 import subprocess
@@ -30,12 +31,26 @@ client = openai.OpenAI(base_url=config.summarization.host, api_key=config.summar
 app = FastAPI(title="meetingnotes")
 log = logging.getLogger("uvicorn.error")
 
+CACHE = Path(__file__).parent / ".cache"  # ponytail: plain files, no eviction; delete the folder to reset
+CACHE.mkdir(exist_ok=True)
+
+
+def cached(name: str, fn) -> str:
+    """Return the stored result for `name`, computing and storing it on first use."""
+    f = CACHE / name
+    if f.exists():
+        log.info("cache hit: %s", name)
+        return f.read_text(encoding="utf-8")
+    value = fn()
+    f.write_text(value, encoding="utf-8")
+    return value
+
 
 class Cancelled(Exception):
     pass
 
 
-def transcribe(path: str, cancel: threading.Event) -> str:
+def transcribe(path: str, cancel: threading.Event, key: str) -> str:
     """Downmix to 16 kHz mono mp3 in 10-min chunks so any recording fits the endpoint's size limit."""
     with tempfile.TemporaryDirectory() as d:
         r = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k",
@@ -44,11 +59,14 @@ def transcribe(path: str, cancel: threading.Event) -> str:
         if r.returncode or not chunks:
             raise HTTPException(400, f"Could not read audio: {r.stderr.strip()[-200:]}")
         parts = []
-        for c in chunks:
+        for i, c in enumerate(chunks):  # finished chunks stay cached, so a cancelled run resumes where it stopped
             if cancel.is_set():
                 raise Cancelled
-            with open(c, "rb") as audio:
-                parts.append(client.audio.transcriptions.create(model=WHISPER_MODEL, file=audio).text.strip())
+
+            def send(c=c):
+                with open(c, "rb") as audio:
+                    return client.audio.transcriptions.create(model=WHISPER_MODEL, file=audio).text.strip()
+            parts.append(cached(f"{key}-{i}.chunk.txt", send))
         return " ".join(parts)  # ponytail: no overlap between chunks, a word on a boundary may split
 
 
@@ -62,7 +80,8 @@ def work(data: bytes, suffix: str, cancel: threading.Event) -> dict:
         tmp.write(data)
     try:
         try:
-            transcript = transcribe(tmp.name, cancel)
+            key = hashlib.sha256(data).hexdigest() + "-" + WHISPER_MODEL
+            transcript = cached(f"{key}.transcript.txt", lambda: transcribe(tmp.name, cancel, key))
         except openai.APIError as e:
             raise HTTPException(502, f"Whisper endpoint error: {e}")
         if cancel.is_set():
@@ -71,7 +90,8 @@ def work(data: bytes, suffix: str, cancel: threading.Event) -> dict:
         if not summarizer.is_available():
             raise HTTPException(502, f"Summarizer not reachable at {config.summarization.host}")
         try:
-            summary = summarizer.summarize(transcript)
+            skey = hashlib.sha256(f"{config.summarization.model}|{transcript}".encode()).hexdigest()
+            summary = cached(f"{skey}.summary.md", lambda: summarizer.summarize(transcript))
         finally:
             summarizer.close()
         return {"transcript": transcript, "summary": summary}
