@@ -2,18 +2,51 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>meetingnotes</title>
 <style>
-body{font:16px system-ui;max-width:48rem;margin:2rem auto;padding:0 1rem;color:#222}
-pre{white-space:pre-wrap;background:#f5f5f5;padding:1rem;border-radius:8px}
-@media(prefers-color-scheme:dark){body{background:#111;color:#eee}pre{background:#1e1e1e}}
-</style></head><body>
-<h1>meetingnotes</h1>
-<form id="f"><input type="file" name="file" accept="audio/*,video/*" required> <button>Transcribe &amp; summarize</button></form>
-<p id="s"></p>
-<h2>Summary</h2><pre id="sum">—</pre>
-<h2>Transcript</h2><pre id="tx">—</pre>
+:root{--glass:rgba(255,255,255,.14);--edge:rgba(255,255,255,.28);--text:#f4f6ff;--muted:rgba(244,246,255,.7);--accent:#8ab4ff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font:16px/1.55 system-ui,sans-serif;color:var(--text);
+ background:radial-gradient(circle at 15% 20%,#5b4bff 0,transparent 45%),radial-gradient(circle at 85% 15%,#ff5fa2 0,transparent 40%),
+ radial-gradient(circle at 70% 90%,#1fd1c1 0,transparent 45%),#101326;background-attachment:fixed}
+main{max-width:52rem;margin:0 auto;padding:2.5rem 16px 4rem;display:grid;gap:1.25rem}
+.glass{background:var(--glass);border:1px solid var(--edge);border-radius:20px;padding:1.5rem;
+ -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
+ box-shadow:0 8px 32px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25)}
+h1{margin:0 0 .25rem;font-size:1.9rem}h2{margin:0 0 .75rem;font-size:1.1rem;color:var(--accent)}
+p{margin:0;color:var(--muted)}
+#drop{display:block;margin-top:1.25rem;padding:2rem 1rem;text-align:center;border:2px dashed var(--edge);border-radius:16px;cursor:pointer;transition:.2s}
+#drop:hover,#drop.over{background:rgba(255,255,255,.12);border-color:var(--accent)}
+#file{display:none}
+button{margin-top:1rem;width:100%;padding:.85rem;border:1px solid var(--edge);border-radius:14px;font:inherit;font-weight:600;color:#fff;cursor:pointer;
+ background:linear-gradient(135deg,rgba(138,180,255,.55),rgba(255,95,162,.45))}
+button:disabled{opacity:.5;cursor:wait}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+#status{min-height:1.4em}
+.bar{height:3px;margin-top:.75rem;border-radius:3px;overflow:hidden;display:none}
+.bar.on{display:block;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:200% 100%;animation:s 1.2s linear infinite}
+@keyframes s{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.bar.on{animation:none}}
+</style></head><body><main>
+<form id="f" class="glass">
+ <h1>meetingnotes</h1><p>Upload a recording to get a transcript and summary.</p>
+ <label id="drop" for="file"><span id="name">Drop an audio file here or click to browse</span></label>
+ <input id="file" type="file" name="file" accept="audio/*,video/*" required>
+ <button id="go">Transcribe &amp; summarize</button>
+ <div class="bar" id="bar"></div><p id="status" role="status"></p>
+</form>
+<section class="glass"><h2>Summary</h2><pre id="sum">—</pre></section>
+<section class="glass"><h2>Transcript</h2><pre id="tx">—</pre></section>
+</main>
 <script>
-f.onsubmit=async e=>{e.preventDefault();s.textContent="Processing… (first run downloads the Whisper model)";
- const r=await fetch("/process",{method:"POST",body:new FormData(f)});
- if(!r.ok){s.textContent="Error: "+(await r.text());return}
- const d=await r.json();s.textContent="Done.";sum.textContent=d.summary;tx.textContent=d.transcript}
+const $=id=>document.getElementById(id),file=$("file"),drop=$("drop");
+const show=()=>{$("name").textContent=file.files[0]?.name||"Drop an audio file here or click to browse"};
+file.onchange=show;
+["dragover","dragenter"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>{file.files=e.dataTransfer.files;show()});
+$("f").onsubmit=async e=>{e.preventDefault();$("go").disabled=true;$("bar").classList.add("on");$("status").textContent="Processing…";
+ try{const r=await fetch("/process",{method:"POST",body:new FormData($("f"))});
+  if(!r.ok)throw new Error(await r.text());
+  const d=await r.json();$("sum").textContent=d.summary;$("tx").textContent=d.transcript;$("status").textContent="Done."}
+ catch(err){$("status").textContent="Error: "+err.message}
+ $("go").disabled=false;$("bar").classList.remove("on")};
 </script></body></html>
