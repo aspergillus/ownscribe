@@ -11,9 +11,9 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;wi
  background:radial-gradient(circle at 15% 20%,#5b4bff 0,transparent 45%),radial-gradient(circle at 85% 15%,#ff5fa2 0,transparent 40%),
  radial-gradient(circle at 70% 90%,#1fd1c1 0,transparent 45%)}
 main{max-width:min(96vw,90rem);margin:0 auto;padding:2.5rem 16px 4rem;display:grid;gap:1.25rem}
-.glass{background:var(--glass);border:1px solid var(--edge);border-radius:20px;padding:1.5rem;
- -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
- box-shadow:0 8px 32px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.25)}
+/* no backdrop-filter: re-blurring what is behind every card on each scroll frame was the main cost, so the glass look is a tinted translucent fill */
+.glass{background:linear-gradient(rgba(255,255,255,.16),rgba(255,255,255,.06)),rgba(16,19,38,.42);border:1px solid var(--edge);border-radius:20px;padding:1.5rem;
+ box-shadow:0 4px 14px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.25)}
 h1{margin:0 0 .25rem;font-size:1.9rem}p{margin:0;color:var(--muted)}
 #drop{display:block;margin-top:1.25rem;padding:2rem 1rem;text-align:center;border:2px dashed var(--edge);border-radius:16px;cursor:pointer;transition:.2s}
 #drop:hover,#drop.over{background:rgba(255,255,255,.12);border-color:var(--accent)}
