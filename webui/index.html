@@ -18,6 +18,8 @@ h1{margin:0 0 .25rem;font-size:1.9rem}p{margin:0;color:var(--muted)}
 button,.btn{display:block;width:100%;margin-top:1rem;padding:.85rem;border:1px solid var(--edge);border-radius:14px;font:inherit;font-weight:600;
  color:#fff;text-align:center;text-decoration:none;cursor:pointer;background:linear-gradient(135deg,rgba(138,180,255,.55),rgba(255,95,162,.45))}
 button:disabled{opacity:.5;cursor:wait}
+#cancel{background:rgba(255,255,255,.1)}#cancel:hover{background:rgba(255,95,95,.35)}
+[hidden]{display:none!important}
 .bar{height:3px;margin-top:.75rem;border-radius:3px;overflow:hidden;display:none}
 .bar.on{display:block;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:200% 100%;animation:s 1.2s linear infinite}
 @keyframes s{to{background-position:-200% 0}}
@@ -43,6 +45,7 @@ button:disabled{opacity:.5;cursor:wait}
  <label id="drop" for="file"><span id="name">Drop an audio file here or click to browse</span></label>
  <input id="file" type="file" name="file" accept="audio/*,video/*" required>
  <button id="go">Transcribe &amp; summarize</button>
+ <button type="button" id="cancel" hidden>Cancel</button>
  <div class="bar" id="bar"></div><p id="status" role="status"></p>
 </form>
 <div id="results">
@@ -105,11 +108,16 @@ file.onchange=show;
 ["dragover","dragenter"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
 ["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
 drop.addEventListener("drop",e=>{file.files=e.dataTransfer.files;show()});
-$("f").onsubmit=async e=>{e.preventDefault();$("go").disabled=true;$("bar").classList.add("on");$("status").textContent="Processing…";
+let ctl;
+$("cancel").onclick=()=>ctl?.abort();
+$("f").onsubmit=async e=>{e.preventDefault();ctl=new AbortController();
+ $("go").disabled=true;$("cancel").hidden=false;$("bar").classList.add("on");$("status").textContent="Processing…";
  $("results").classList.remove("on");
- try{const r=await fetch("/process",{method:"POST",body:new FormData($("f"))});
+ try{const r=await fetch("/process",{method:"POST",body:new FormData($("f")),signal:ctl.signal});
   if(!r.ok)throw new Error(await r.text());
-  render(await r.json(),file.files[0]?.name);$("status").textContent="Done."}
- catch(err){$("status").textContent="Error: "+err.message}
- $("go").disabled=false;$("bar").classList.remove("on")};
+  const d=await r.json();
+  if(d.cancelled)$("status").textContent="Cancelled.";
+  else{render(d,file.files[0]?.name);$("status").textContent="Done."}}
+ catch(err){$("status").textContent=err.name==="AbortError"?"Cancelled.":"Error: "+err.message}
+ $("go").disabled=false;$("cancel").hidden=true;$("bar").classList.remove("on")};
 </script></body></html>
