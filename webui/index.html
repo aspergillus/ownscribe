@@ -35,8 +35,8 @@ button:disabled{opacity:.5;cursor:wait}
 .act .card{border-left:3px solid var(--act)}.info .card{border-left:3px solid var(--info)}
 .card p{color:var(--text)}.card ul{margin:0;padding-left:1.15rem}.card li{margin:.25rem 0}.card ul ul{margin:.15rem 0}
 .empty{color:var(--muted);font-style:italic}
-.dl{margin:0}
-@media(max-width:700px){.cols{grid-template-columns:1fr}.col+.col{border-left:0;border-top:1px solid var(--edge)}}
+.dls{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.dls .btn{margin:0}
+@media(max-width:700px){.cols,.dls{grid-template-columns:1fr}.col+.col{border-left:0;border-top:1px solid var(--edge)}}
 </style></head><body><main>
 <form id="f" class="glass">
  <h1>meetingnotes</h1><p>Upload a recording to get a summary and a downloadable transcript.</p>
@@ -50,7 +50,10 @@ button:disabled{opacity:.5;cursor:wait}
   <section class="col act"><h2>Action-oriented</h2><div id="act"></div></section>
   <section class="col info"><h2>Information</h2><div id="info"></div></section>
  </div>
- <a class="btn dl" id="dl" download="transcript.txt">Download transcript</a>
+ <div class="dls">
+  <a class="btn" id="dlsum" download="summary.md">Download summary</a>
+  <a class="btn" id="dl" download="transcript.txt">Download transcript</a>
+ </div>
 </div>
 </main>
 <script>
@@ -90,8 +93,10 @@ function render(d,fname){
  }
  $("act").innerHTML=a.join("")||'<p class="empty">Nothing here for this meeting.</p>';
  $("info").innerHTML=i.join("")||'<p class="empty">Nothing here for this meeting.</p>';
- $("dl").href=URL.createObjectURL(new Blob([d.transcript.trim()+"\n"],{type:"text/plain"}));
- $("dl").download=(fname||"transcript").replace(/\.[^.]+$/,"")+"-transcript.txt";
+ const base=(fname||"meeting").replace(/\.[^.]+$/,"");
+ const link=(id,text,type,name)=>{$(id).href=URL.createObjectURL(new Blob([text.trim()+"\n"],{type}));$(id).download=name};
+ link("dlsum",d.summary,"text/markdown",base+"-summary.md"); // one file, both columns
+ link("dl",d.transcript,"text/plain",base+"-transcript.txt");
  $("results").classList.add("on");
 }
 
