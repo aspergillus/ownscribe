@@ -40,7 +40,8 @@ button:disabled{opacity:.5;cursor:wait}
 .col+.col{border-left:1px solid var(--edge)}
 .col>h2{margin:0 0 1rem;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase}
 .col.act>h2{color:var(--act)}.col.info>h2{color:var(--info)}
-.card{background:rgba(255,255,255,.08);border:1px solid var(--edge);border-radius:14px;padding:1rem 1.1rem;margin-bottom:.85rem}
+.card{background:rgba(255,255,255,.08);border:1px solid var(--edge);border-radius:14px;padding:1rem 1.1rem;margin-bottom:.85rem;
+ contain:layout paint style;content-visibility:auto;contain-intrinsic-size:auto 11rem}  /* off-screen cards are skipped until scrolled near */
 .card:last-child{margin-bottom:0}
 .card h3{margin:0 0 .5rem;font-size:1rem}
 .act .card{border-left:3px solid var(--act)}.info .card{border-left:3px solid var(--info)}
