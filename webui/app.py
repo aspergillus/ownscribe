@@ -1,5 +1,7 @@
 """Minimal web UI for ownscribe: upload audio -> transcript + summary. Run: uvicorn webui.app:app"""
+import glob
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -25,6 +27,21 @@ client = openai.OpenAI(base_url=config.summarization.host, api_key=config.summar
 app = FastAPI(title="meetingnotes")
 
 
+def transcribe(path: str) -> str:
+    """Downmix to 16 kHz mono mp3 in 10-min chunks so any recording fits the endpoint's size limit."""
+    with tempfile.TemporaryDirectory() as d:
+        r = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k",
+                            "-f", "segment", "-segment_time", "600", f"{d}/c%04d.mp3"], capture_output=True, text=True)
+        chunks = sorted(glob.glob(f"{d}/c*.mp3"))
+        if r.returncode or not chunks:
+            raise HTTPException(400, f"Could not read audio: {r.stderr.strip()[-200:]}")
+        parts = []
+        for c in chunks:
+            with open(c, "rb") as audio:
+                parts.append(client.audio.transcriptions.create(model=WHISPER_MODEL, file=audio).text.strip())
+        return " ".join(parts)  # ponytail: no overlap between chunks, a word on a boundary may split
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
@@ -36,8 +53,10 @@ def process(file: UploadFile = File(...)):
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(file.file.read())
     try:
-        with open(tmp.name, "rb") as audio:
-            transcript = client.audio.transcriptions.create(model=WHISPER_MODEL, file=audio).text
+        try:
+            transcript = transcribe(tmp.name)
+        except openai.APIError as e:
+            raise HTTPException(502, f"Whisper endpoint error: {e}")
         summarizer = create_summarizer(config)
         if not summarizer.is_available():
             raise HTTPException(502, f"Summarizer not reachable at {config.summarization.host}")
