@@ -20,6 +20,12 @@ button,.btn{display:block;width:100%;margin-top:1rem;padding:.85rem;border:1px s
 button:disabled{opacity:.5;cursor:wait}
 #cancel{background:rgba(255,255,255,.1)}#cancel:hover{background:rgba(255,95,95,.35)}
 [hidden]{display:none!important}
+.note{display:flex;align-items:center;gap:.6rem;margin-top:1rem;padding:.7rem 1rem;border-radius:12px;border:1px solid var(--edge);
+ background:rgba(255,255,255,.1);color:var(--text);font-size:.95rem}
+.note::before{content:"";flex:none;width:.6rem;height:.6rem;border-radius:50%;background:var(--accent)}
+.note.ok::before{background:var(--info)}
+.note.cancelled{border-color:rgba(255,200,120,.55);background:rgba(255,190,100,.14)}.note.cancelled::before{background:#ffc878}
+.note.error{border-color:rgba(255,120,120,.6);background:rgba(255,90,90,.16)}.note.error::before{background:#ff7a7a}
 .bar{height:3px;margin-top:.75rem;border-radius:3px;overflow:hidden;display:none}
 .bar.on{display:block;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:200% 100%;animation:s 1.2s linear infinite}
 @keyframes s{to{background-position:-200% 0}}
@@ -46,7 +52,7 @@ button:disabled{opacity:.5;cursor:wait}
  <input id="file" type="file" name="file" accept="audio/*,video/*" required>
  <button id="go">Transcribe &amp; summarize</button>
  <button type="button" id="cancel" hidden>Cancel</button>
- <div class="bar" id="bar"></div><p id="status" role="status"></p>
+ <div class="bar" id="bar"></div><div id="status" class="note" role="status" hidden></div>
 </form>
 <div id="results">
  <div class="glass cols">
@@ -61,6 +67,7 @@ button:disabled{opacity:.5;cursor:wait}
 </main>
 <script>
 const $=id=>document.getElementById(id),file=$("file"),drop=$("drop");
+const say=(text,kind="")=>{const n=$("status");n.textContent=text;n.className="note "+kind;n.hidden=!text};
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
 // summary headings that belong in the action column; everything else goes to information
@@ -111,13 +118,13 @@ drop.addEventListener("drop",e=>{file.files=e.dataTransfer.files;show()});
 let ctl;
 $("cancel").onclick=()=>ctl?.abort();
 $("f").onsubmit=async e=>{e.preventDefault();ctl=new AbortController();
- $("go").disabled=true;$("cancel").hidden=false;$("bar").classList.add("on");$("status").textContent="Processing…";
+ $("go").disabled=true;$("cancel").hidden=false;$("bar").classList.add("on");say("Processing…");
  $("results").classList.remove("on");
  try{const r=await fetch("/process",{method:"POST",body:new FormData($("f")),signal:ctl.signal});
   if(!r.ok)throw new Error(await r.text());
   const d=await r.json();
-  if(d.cancelled)$("status").textContent="Cancelled.";
-  else{render(d,file.files[0]?.name);$("status").textContent="Done."}}
- catch(err){$("status").textContent=err.name==="AbortError"?"Cancelled.":"Error: "+err.message}
+  if(d.cancelled)say("Request cancelled.","cancelled");
+  else{render(d,file.files[0]?.name);say("Done.","ok")}}
+ catch(err){err.name==="AbortError"?say("Request cancelled.","cancelled"):say("Error: "+err.message,"error")}
  $("go").disabled=false;$("cancel").hidden=true;$("bar").classList.remove("on")};
 </script></body></html>
