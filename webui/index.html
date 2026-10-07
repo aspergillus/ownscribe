@@ -69,6 +69,8 @@ button:disabled{opacity:.55;cursor:wait}
 #results.on{display:grid;gap:1rem}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:1rem}
 .col{min-width:0}
+.col[hidden]{display:none}
+.cols.one{grid-template-columns:1fr}
 .col>h3{margin:0 0 .6rem;font-size:.95rem;font-weight:600}
 .col.act>h3{color:var(--act)}.col.info>h3{color:var(--info)}
 .box{background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:.35rem .9rem}
@@ -117,8 +119,8 @@ button:disabled{opacity:.55;cursor:wait}
  <section class="panel">
   <h2>Meeting Analysis</h2>
   <div class="cols">
-   <div class="col act"><h3>Action-oriented sections</h3><div class="box" id="act"></div></div>
-   <div class="col info"><h3>Information-oriented sections</h3><div class="box" id="info"></div></div>
+   <div class="col act" id="colAct"><h3>Action-oriented sections</h3><div class="box" id="act"></div></div>
+   <div class="col info" id="colInfo"><h3>Information-oriented sections</h3><div class="box" id="info"></div></div>
   </div>
   <div class="dls">
    <a class="btn" id="dlsum" download="summary.md">Download summary</a>
@@ -132,8 +134,6 @@ const $=id=>document.getElementById(id),file=$("file"),drop=$("drop");
 const say=(text,kind="")=>{const n=$("status");n.textContent=text;n.className="note "+kind;n.hidden=!text};
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
-// summary headings that belong in the action column; everything else goes to information
-const ACTION=/summary|action|next step|decision|follow/i;
 
 function body(lines){ // tiny markdown: paragraphs, nested "- " bullets
  let html="",depth=-1;
@@ -157,14 +157,22 @@ function sections(md){ // [{title, lines}] split on "## " headings
  }
  return out;
 }
-function render(d,fname){
- const a=[],i=[];
- for(const s of sections(d.summary)){
-  const html=`<div class="card"><h4>${esc(s.title)}</h4>${body(s.lines)}</div>`;
-  (ACTION.test(s.title)?a:i).push(html);
- }
- $("act").innerHTML=a.join("")||'<p class="empty">Nothing here for this meeting.</p>';
- $("info").innerHTML=i.join("")||'<p class="empty">Nothing here for this meeting.</p>';
+function render(d,fname,keys=META.profiles.complete){
+ // The model was asked for exactly the selected headings, so match by label; group and order come from the server's list.
+ const chosen=META.sections.filter(m=>keys.includes(m.key));
+ const parsed=new Map(sections(d.summary).map(x=>[x.title.toLowerCase(),x]));
+ const card=(title,lines)=>{
+  const text=lines.join("\n").trim();
+  const inner=!text||/^none mentioned\.?$/i.test(text)?'<p class="empty">None mentioned.</p>':body(lines);
+  return `<div class="card"><h4>${esc(title)}</h4>${inner}</div>`;
+ };
+ const cols={action:[],info:[]};
+ for(const m of chosen){const x=parsed.get(m.label.toLowerCase());cols[m.group].push(card(m.label,x?x.lines:[]))}
+ if(![...parsed.keys()].some(t=>chosen.some(m=>m.label.toLowerCase()===t))) // model ignored the headings: show what it wrote
+  for(const x of parsed.values())cols.info.push(card(x.title,x.lines));
+ $("act").innerHTML=cols.action.join("");$("info").innerHTML=cols.info.join("");
+ $("colAct").hidden=!cols.action.length;$("colInfo").hidden=!cols.info.length;
+ document.querySelector(".cols").classList.toggle("one",!cols.action.length||!cols.info.length);
  const base=(fname||"meeting").replace(/\.[^.]+$/,"");
  const link=(id,text,type,name)=>{$(id).href=URL.createObjectURL(new Blob([text.trim()+"\n"],{type}));$(id).download=name};
  link("dlsum",d.summary,"text/markdown",base+"-summary.md"); // one file, both columns
@@ -223,11 +231,12 @@ $("cancel").onclick=()=>ctl?.abort();
 $("f").onsubmit=async e=>{e.preventDefault();
  $("go").disabled=true;$("cancel").hidden=false;$("results").classList.remove("on");
  const bar=$("bar"),fill=$("fill");bar.className="bar on";fill.style.width="0";say("Uploading… 0%");
- try{const d=await send(selection(),(l,t)=>{
+ try{const chosenKeys=picked();
+ const d=await send(selection(),(l,t)=>{
    if(l===null){bar.classList.add("wait");fill.style.width="";say("Upload complete. Transcribing and summarizing…");return}
    fill.style.width=(l/t*100)+"%";say(`Uploading… ${Math.round(l/t*100)}% (${mb(l)} / ${mb(t)} MB)`)});
   if(d.cancelled)say("Request cancelled.","cancelled");
-  else{render(d,file.files[0]?.name);say("Done.","ok")}}
+  else{render(d,file.files[0]?.name,chosenKeys);say("Done.","ok")}}
  catch(err){err.name==="AbortError"?say("Request cancelled.","cancelled"):say("Error: "+err.message,"error")}
  sync();$("cancel").hidden=true;$("bar").className="bar"};
 </script></body></html>
