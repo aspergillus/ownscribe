@@ -1,4 +1,6 @@
 """Summary sections the user can pick from, grouped as in the UI (action-oriented vs information-oriented)."""
+import difflib
+import re
 
 # Order here is the order sections appear in the prompt and in the UI.
 SECTIONS = [
@@ -69,3 +71,28 @@ def build_template(keys, detail="concise"):
     chosen = [s for s in SECTIONS if s["key"] in set(keys)]
     block = "\n\n".join(f"## {s['label']}\n{_RULES[s['key']].format(**caps)}" for s in chosen)
     return {"system_prompt": _SYSTEM, "prompt": _PROMPT.format(sections=block)}
+
+
+_FILLERS = {"okay", "ok", "yeah", "yes", "yep", "right", "sure", "correct", "exactly", "alright",
+            "uh", "um", "hmm", "mm", "thanks", "thank", "you", "bye", "so", "well"}
+
+
+def _norm(sentence):
+    return re.sub(r"[^a-z0-9 ]", "", sentence.lower()).strip()
+
+
+def clean_transcript(text):
+    """Drop filler-only sentences and repeats so the model sees each statement once."""
+    seen, window, kept = set(), [], []
+    for sentence in re.split(r"(?<=[.!?])\s+", text.strip()):
+        n = _norm(sentence)
+        if not n or all(w in _FILLERS for w in n.split()):
+            continue
+        if len(n.split()) >= 6 and n in seen:  # far-apart repeats only count for longer sentences; short ones can recur naturally
+            continue
+        if any(difflib.SequenceMatcher(None, n, p).ratio() >= 0.9 for p in window):
+            continue
+        seen.add(n)
+        window = (window + [n])[-20:]  # ponytail: only recent sentences are fuzzy-compared; O(n*20)
+        kept.append(sentence.strip())
+    return " ".join(kept)
