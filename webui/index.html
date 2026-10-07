@@ -19,6 +19,18 @@ h1,h2{margin:0;font-size:1rem;font-weight:600}
 #drop .hint{color:var(--muted);font-size:.9rem}
 #drop.has .hint{display:none}
 #file{display:none}
+/* section picker */
+.picker{margin-top:1.5rem}
+.picker h2{font-size:1rem}
+.lists{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.list{margin:0;padding:0;border:0;min-width:0}
+.list legend{padding:0;margin-bottom:.6rem;font-size:.85rem;font-weight:600}
+.list.act legend{color:var(--act)}.list.info legend{color:var(--info)}
+.opts{background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:.4rem}
+.opt{display:flex;align-items:center;gap:.7rem;padding:.65rem .7rem;border-radius:6px;cursor:pointer;font-size:.92rem}
+.opt:hover{background:#26324a}
+.opt input{flex:none;width:1.05rem;height:1.05rem;margin:0;accent-color:var(--blue-hi)}
+@media(max-width:700px){.lists{grid-template-columns:1fr}}
 /* buttons */
 button,.btn{display:block;width:100%;padding:.8rem;border:1px solid var(--line);border-radius:8px;font:inherit;font-weight:600;color:var(--text);
  text-align:center;text-decoration:none;cursor:pointer;background:#4a5568;transition:background .15s}
@@ -66,6 +78,13 @@ button:disabled{opacity:.55;cursor:wait}
   <span class="hint" style="color:var(--text)">Click to Upload</span>
  </label>
  <input id="file" type="file" name="file" accept="audio/*,video/*" required>
+<div class="picker">
+  <h2>Summary Sections</h2><p class="sub">Pick what the notes should include. Only the ticked sections are generated.</p>
+  <div class="lists">
+   <fieldset class="list act"><legend>Action-oriented sections</legend><div class="opts" id="listAct"></div></fieldset>
+   <fieldset class="list info"><legend>Information-oriented sections</legend><div class="opts" id="listInfo"></div></fieldset>
+  </div>
+ </div>
  <button id="go">Analyze Meeting</button>
  <button type="button" id="cancel" hidden>Cancel</button>
  <div class="bar" id="bar"><i id="fill"></i></div><div id="status" class="note" role="status" hidden></div>
@@ -134,6 +153,16 @@ file.onchange=show;
 ["dragover","dragenter"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
 ["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
 drop.addEventListener("drop",e=>{file.files=e.dataTransfer.files;show()});
+// section checklist, built from the server's list so the page never hard-codes it
+let META={sections:[],profiles:{}};
+const picked=()=>[...document.querySelectorAll(".opt input:checked")].map(i=>i.value);
+async function loadSections(){
+ META=await (await fetch("/api/sections")).json();
+ for(const s of META.sections)
+  $(s.group==="action"?"listAct":"listInfo").insertAdjacentHTML("beforeend",
+   `<label class="opt"><input type="checkbox" value="${s.key}" checked><span>${esc(s.label)}</span></label>`);
+}
+loadSections();
 let ctl;
 // XMLHttpRequest because fetch cannot report upload progress; onUp(loaded,total) while sending, onUp(null) once the upload is done
 const send=(fd,onUp)=>new Promise((res,rej)=>{
