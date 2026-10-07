@@ -26,6 +26,13 @@ h1,h2{margin:0;font-size:1rem;font-weight:600}
 .profiles{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1rem}
 .profiles button{padding:.55rem .4rem;font-size:.85rem}
 .profiles button.on{border-color:var(--blue-hi);background:#2b4a8a}
+.detail{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem}
+.detail>span{font-size:.85rem;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg label{padding:.45rem .95rem;font-size:.85rem;font-weight:600;cursor:pointer;background:var(--inset);color:var(--muted)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:#2b4a8a;color:var(--text)}
+.seg label:has(input:focus-visible){outline:2px solid var(--blue-hi);outline-offset:-2px}
 .count{margin:.75rem 0 0;font-size:.85rem;color:var(--muted)}
 @media(max-width:520px){.profiles{grid-template-columns:1fr}}
 .list{margin:0;padding:0;border:0;min-width:0}
@@ -85,6 +92,12 @@ button:disabled{opacity:.55;cursor:wait}
  <input id="file" type="file" name="file" accept="audio/*,video/*" required>
 <div class="picker">
   <h2>Summary Sections</h2><p class="sub">Pick what the notes should include. Only the ticked sections are generated.</p>
+  <div class="detail"><span>Level of detail</span>
+   <div class="seg" role="radiogroup" aria-label="Level of detail">
+    <label><input type="radio" name="detail" value="concise" checked>Concise</label>
+    <label><input type="radio" name="detail" value="detailed">Detailed</label>
+   </div>
+  </div>
   <div class="profiles" id="profiles" role="group" aria-label="Section profiles">
    <button type="button" data-p="action">Action Profile</button>
    <button type="button" data-p="information">Information Profile</button>
