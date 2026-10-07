@@ -187,8 +187,17 @@ async function loadSections(){
    `<label class="opt"><input type="checkbox" value="${s.key}" checked><span>${esc(s.label)}</span></label>`);
 }
 const same=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
-function sync(){ // counter + highlight the profile that matches the current ticks exactly
- const p=picked();$("count").textContent=`${p.length} of ${META.sections.length} selected`;
+const SAVE="meetingnotes.prefs";
+const save=()=>{try{localStorage.setItem(SAVE,JSON.stringify({sections:picked(),detail:new FormData($("f")).get("detail")}))}catch{}};
+const restore=()=>{try{
+ const v=JSON.parse(localStorage.getItem(SAVE)||"null");if(!v)return;
+ document.querySelectorAll(".opt input").forEach(i=>i.checked=v.sections.includes(i.value));
+ const r=document.querySelector(`input[name=detail][value="${v.detail}"]`);if(r)r.checked=true;
+}catch{}};
+function sync(){ // counter, Analyze availability, profile highlight, remembered choice
+ const p=picked();
+ $("count").textContent=p.length?`${p.length} of ${META.sections.length} selected`:"Select at least one section.";
+ $("go").disabled=!p.length;save();
  document.querySelectorAll("#profiles button").forEach(b=>b.classList.toggle("on",same(p,META.profiles[b.dataset.p]||[])));
 }
 $("profiles").onclick=e=>{
@@ -197,7 +206,7 @@ $("profiles").onclick=e=>{
  document.querySelectorAll(".opt input").forEach(i=>i.checked=set.includes(i.value));sync();
 };
 document.querySelector(".picker").addEventListener("change",sync);
-loadSections().then(sync);
+loadSections().then(()=>{restore();sync()});
 let ctl;
 // XMLHttpRequest because fetch cannot report upload progress; onUp(loaded,total) while sending, onUp(null) once the upload is done
 const send=(fd,onUp)=>new Promise((res,rej)=>{
@@ -208,16 +217,17 @@ const send=(fd,onUp)=>new Promise((res,rej)=>{
  x.onerror=()=>rej(new Error("Network error"));
  x.onabort=()=>rej(Object.assign(new Error("aborted"),{name:"AbortError"}));
  ctl=x;x.send(fd)});
+const selection=()=>{const fd=new FormData($("f"));fd.set("sections",JSON.stringify(picked()));return fd};
 const mb=n=>(n/1048576).toFixed(1);
 $("cancel").onclick=()=>ctl?.abort();
 $("f").onsubmit=async e=>{e.preventDefault();
  $("go").disabled=true;$("cancel").hidden=false;$("results").classList.remove("on");
  const bar=$("bar"),fill=$("fill");bar.className="bar on";fill.style.width="0";say("Uploading… 0%");
- try{const d=await send(new FormData($("f")),(l,t)=>{
+ try{const d=await send(selection(),(l,t)=>{
    if(l===null){bar.classList.add("wait");fill.style.width="";say("Upload complete. Transcribing and summarizing…");return}
    fill.style.width=(l/t*100)+"%";say(`Uploading… ${Math.round(l/t*100)}% (${mb(l)} / ${mb(t)} MB)`)});
   if(d.cancelled)say("Request cancelled.","cancelled");
   else{render(d,file.files[0]?.name);say("Done.","ok")}}
  catch(err){err.name==="AbortError"?say("Request cancelled.","cancelled"):say("Error: "+err.message,"error")}
- $("go").disabled=false;$("cancel").hidden=true;$("bar").className="bar"};
+ sync();$("cancel").hidden=true;$("bar").className="bar"};
 </script></body></html>
