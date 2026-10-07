@@ -2,71 +2,83 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>meetingnotes</title>
 <style>
-:root{--glass:rgba(255,255,255,.14);--edge:rgba(255,255,255,.28);--text:#f4f6ff;--muted:rgba(244,246,255,.7);--accent:#8ab4ff;--act:#ff8fc0;--info:#7ee0d4}
+:root{--bg:#202938;--panel:#384252;--inset:#202938;--line:#4d586a;--text:#f3f4f6;--muted:#9ca3af;--blue:#2563eb;--blue-hi:#3b82f6;--act:#f0abfc;--info:#7dd3fc}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;font:16px/1.55 system-ui,sans-serif;color:var(--text);
- background:#101326}
-/* gradient lives on its own fixed layer: the browser composites it instead of repainting it on every scroll frame */
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;will-change:transform;
- background:radial-gradient(circle at 15% 20%,#5b4bff 0,transparent 45%),radial-gradient(circle at 85% 15%,#ff5fa2 0,transparent 40%),
- radial-gradient(circle at 70% 90%,#1fd1c1 0,transparent 45%)}
-main{max-width:min(96vw,90rem);margin:0 auto;padding:2.5rem 16px 4rem;display:grid;gap:1.25rem}
-/* no backdrop-filter: re-blurring what is behind every card on each scroll frame was the main cost, so the glass look is a tinted translucent fill */
-.glass{background:linear-gradient(rgba(255,255,255,.16),rgba(255,255,255,.06)),rgba(16,19,38,.42);border:1px solid var(--edge);border-radius:20px;padding:1.5rem;
- box-shadow:0 4px 14px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.25)}
-h1{margin:0 0 .25rem;font-size:1.9rem}p{margin:0;color:var(--muted)}
-#drop{display:block;margin-top:1.25rem;padding:2rem 1rem;text-align:center;border:2px dashed var(--edge);border-radius:16px;cursor:pointer;transition:.2s}
-#drop:hover,#drop.over{background:rgba(255,255,255,.12);border-color:var(--accent)}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:min(94vw,80rem);margin:0 auto;padding:2rem 16px 4rem;display:grid;gap:1rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.25rem}
+h1,h2{margin:0;font-size:1rem;font-weight:600}
+.sub{margin:.25rem 0 0;color:var(--muted);font-size:.9rem}
+/* drop zone */
+#drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;margin-top:1rem;min-height:11rem;
+ background:var(--inset);border:1px dashed var(--line);border-radius:8px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s}
+#drop:hover,#drop.over{border-color:var(--blue-hi);background:#232d3e}
+#drop .chip{position:absolute;top:0;left:0;padding:.3rem .7rem;font-size:.8rem;font-weight:600;background:var(--panel);border:1px solid var(--line);border-radius:8px 0 8px 0}
+#drop svg{width:28px;height:28px;margin-bottom:.35rem}
+#drop .hint{color:var(--muted);font-size:.9rem}
+#drop.has .hint{display:none}
 #file{display:none}
-button,.btn{display:block;width:100%;margin-top:1rem;padding:.85rem;border:1px solid var(--edge);border-radius:14px;font:inherit;font-weight:600;
- color:#fff;text-align:center;text-decoration:none;cursor:pointer;background:linear-gradient(135deg,rgba(138,180,255,.55),rgba(255,95,162,.45))}
-button:disabled{opacity:.5;cursor:wait}
-#cancel{background:rgba(255,255,255,.1)}#cancel:hover{background:rgba(255,95,95,.35)}
+/* buttons */
+button,.btn{display:block;width:100%;padding:.8rem;border:1px solid var(--line);border-radius:8px;font:inherit;font-weight:600;color:var(--text);
+ text-align:center;text-decoration:none;cursor:pointer;background:#4a5568;transition:background .15s}
+button:hover,.btn:hover{background:#556074}
+#go{margin-top:1rem;border-color:var(--blue);background:var(--blue)}
+#go:hover{background:var(--blue-hi)}
+button:disabled{opacity:.55;cursor:wait}
+#cancel{margin-top:.6rem}
 [hidden]{display:none!important}
-.note{display:flex;align-items:center;gap:.6rem;margin-top:1rem;padding:.7rem 1rem;border-radius:12px;border:1px solid var(--edge);
- background:rgba(255,255,255,.1);color:var(--text);font-size:.95rem}
-.note::before{content:"";flex:none;width:.6rem;height:.6rem;border-radius:50%;background:var(--accent)}
-.note.ok::before{background:var(--info)}
-.note.cancelled{border-color:rgba(255,200,120,.55);background:rgba(255,190,100,.14)}.note.cancelled::before{background:#ffc878}
-.note.error{border-color:rgba(255,120,120,.6);background:rgba(255,90,90,.16)}.note.error::before{background:#ff7a7a}
-.bar{height:3px;margin-top:.75rem;border-radius:3px;overflow:hidden;display:none}
-.bar.on{display:block;background:linear-gradient(90deg,transparent,var(--accent),transparent);background-size:200% 100%;animation:s 1.2s linear infinite}
+.bar{height:2px;margin-top:.9rem;border-radius:2px;overflow:hidden;display:none}
+.bar.on{display:block;background:linear-gradient(90deg,transparent,var(--blue-hi),transparent);background-size:200% 100%;animation:s 1.2s linear infinite}
 @keyframes s{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.bar.on{animation:none}}
+/* status notice */
+.note{display:flex;align-items:center;gap:.6rem;margin-top:.9rem;padding:.65rem .9rem;border-radius:8px;border:1px solid var(--line);background:var(--inset);font-size:.9rem}
+.note::before{content:"";flex:none;width:.55rem;height:.55rem;border-radius:50%;background:var(--blue-hi)}
+.note.ok::before{background:#4ade80}
+.note.cancelled{border-color:#7a6a3a}.note.cancelled::before{background:#fbbf24}
+.note.error{border-color:#7f3a3a}.note.error::before{background:#f87171}
+/* results */
 #results{display:none}
-#results.on{display:grid;gap:1.25rem}
-.cols{display:grid;grid-template-columns:1fr 1fr;padding:0;overflow:hidden}
-.col{padding:1.5rem;min-width:0}
-.col+.col{border-left:1px solid var(--edge)}
-.col>h2{margin:0 0 1rem;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase}
-.col.act>h2{color:var(--act)}.col.info>h2{color:var(--info)}
-.card{background:rgba(255,255,255,.08);border:1px solid var(--edge);border-radius:14px;padding:1rem 1.1rem;margin-bottom:.85rem;
- contain:layout paint style;content-visibility:auto;contain-intrinsic-size:auto 11rem}  /* off-screen cards are skipped until scrolled near */
-.card:last-child{margin-bottom:0}
-.card h3{margin:0 0 .5rem;font-size:1rem}
-.act .card{border-left:3px solid var(--act)}.info .card{border-left:3px solid var(--info)}
-.card p{color:var(--text)}.card ul{margin:0;padding-left:1.15rem}.card li{margin:.25rem 0}.card ul ul{margin:.15rem 0}
-.empty{color:var(--muted);font-style:italic}
-.dls{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.dls .btn{margin:0}
-@media(max-width:700px){.cols,.dls{grid-template-columns:1fr}.col+.col{border-left:0;border-top:1px solid var(--edge)}}
+#results.on{display:grid;gap:1rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:1rem}
+.col{min-width:0}
+.col>h3{margin:0 0 .6rem;font-size:.95rem;font-weight:600}
+.col.act>h3{color:var(--act)}.col.info>h3{color:var(--info)}
+.box{background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:.35rem .9rem}
+.card{padding:.75rem 0;border-bottom:1px solid var(--line);contain:layout paint style;content-visibility:auto;contain-intrinsic-size:auto 9rem}
+.card:last-child{border-bottom:0}
+.card h4{margin:0 0 .35rem;font-size:.95rem}
+.card p{margin:0}.card ul{margin:0;padding-left:1.15rem}.card li{margin:.2rem 0}.card ul ul{margin:.1rem 0}
+.empty{margin:.75rem 0;color:var(--muted);font-style:italic}
+.dls{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:1rem}
+@media(max-width:700px){.cols,.dls{grid-template-columns:1fr}}
 </style></head><body><main>
-<form id="f" class="glass">
- <h1>meetingnotes</h1><p>Upload a recording to get a summary and a downloadable transcript.</p>
- <label id="drop" for="file"><span id="name">Drop an audio file here or click to browse</span></label>
+<form id="f" class="panel">
+ <h1>Audio Mode</h1><p class="sub">Upload a recording to get a summary and a downloadable transcript.</p>
+ <label id="drop" for="file">
+  <span class="chip">Recording or audio file</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4m0 0L8 8m4-4l4 4M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+  <strong id="name">Drop Audio Here</strong>
+  <span class="hint">- or -</span>
+  <span class="hint" style="color:var(--text)">Click to Upload</span>
+ </label>
  <input id="file" type="file" name="file" accept="audio/*,video/*" required>
- <button id="go">Transcribe &amp; summarize</button>
+ <button id="go">Analyze Meeting</button>
  <button type="button" id="cancel" hidden>Cancel</button>
  <div class="bar" id="bar"></div><div id="status" class="note" role="status" hidden></div>
 </form>
 <div id="results">
- <div class="glass cols">
-  <section class="col act"><h2>Action-oriented</h2><div id="act"></div></section>
-  <section class="col info"><h2>Information</h2><div id="info"></div></section>
- </div>
- <div class="dls">
-  <a class="btn" id="dlsum" download="summary.md">Download summary</a>
-  <a class="btn" id="dl" download="transcript.txt">Download transcript</a>
- </div>
+ <section class="panel">
+  <h2>Meeting Analysis</h2>
+  <div class="cols">
+   <div class="col act"><h3>Action-oriented sections</h3><div class="box" id="act"></div></div>
+   <div class="col info"><h3>Information-oriented sections</h3><div class="box" id="info"></div></div>
+  </div>
+  <div class="dls">
+   <a class="btn" id="dlsum" download="summary.md">Download summary</a>
+   <a class="btn" id="dl" download="transcript.txt">Download transcript</a>
+  </div>
+ </section>
 </div>
 </main>
 <script>
@@ -102,7 +114,7 @@ function sections(md){ // [{title, lines}] split on "## " headings
 function render(d,fname){
  const a=[],i=[];
  for(const s of sections(d.summary)){
-  const html=`<div class="card"><h3>${esc(s.title)}</h3>${body(s.lines)}</div>`;
+  const html=`<div class="card"><h4>${esc(s.title)}</h4>${body(s.lines)}</div>`;
   (ACTION.test(s.title)?a:i).push(html);
  }
  $("act").innerHTML=a.join("")||'<p class="empty">Nothing here for this meeting.</p>';
@@ -114,7 +126,7 @@ function render(d,fname){
  $("results").classList.add("on");
 }
 
-const show=()=>{$("name").textContent=file.files[0]?.name||"Drop an audio file here or click to browse"};
+const show=()=>{const f=file.files[0];$("name").textContent=f?f.name:"Drop Audio Here";drop.classList.toggle("has",!!f)};
 file.onchange=show;
 ["dragover","dragenter"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
 ["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
