@@ -5,7 +5,8 @@
 :root{--bg:#202938;--panel:#384252;--inset:#202938;--line:#4d586a;--text:#f3f4f6;--muted:#9ca3af;--blue:#2563eb;--blue-hi:#3b82f6;--act:#f0abfc;--info:#7dd3fc}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:min(94vw,80rem);margin:0 auto;padding:2rem 16px 4rem;display:grid;gap:1rem}
+main{max-width:min(96vw,96rem);margin:0 auto;padding:2rem 16px 4rem;display:grid;gap:1rem}
+#f{width:100%;max-width:44rem;margin-inline:auto}  /* upload panel stays narrow; the analysis below uses the full width */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.25rem}
 h1,h2{margin:0;font-size:1rem;font-weight:600}
 .sub{margin:.25rem 0 0;color:var(--muted);font-size:.9rem}
