@@ -1,7 +1,9 @@
 """Minimal web UI for ownscribe: upload audio -> transcript + summary. Run: uvicorn webui.app:app"""
 import asyncio
+import dataclasses
 import glob
 import hashlib
+import json
 import logging
 import os
 import subprocess
@@ -9,11 +11,11 @@ import tempfile
 import threading
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse
 
 import openai
-from ownscribe.config import Config
+from ownscribe.config import Config, TemplateConfig
 from ownscribe.summarization import create_summarizer
 from webui import sections
 
@@ -27,6 +29,7 @@ config = Config.load()
 config.summarization.host = os.environ.get("OPENAI_BASE_URL", config.summarization.host)
 
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "whisper-large-v3")  # served by the remote endpoint, nothing runs locally
+SUMMARY_CONTEXT = int(os.environ.get("SUMMARY_CONTEXT", "32768"))  # tokens; bigger = fewer chunks, lower it if the model rejects long prompts
 client = openai.OpenAI(base_url=config.summarization.host, api_key=config.summarization.api_key or "not-needed")
 
 app = FastAPI(title="meetingnotes")
@@ -82,7 +85,7 @@ def api_sections():
     return {"sections": sections.SECTIONS, "profiles": sections.PROFILES}
 
 
-def work(data: bytes, suffix: str, cancel: threading.Event) -> dict:
+def work(data: bytes, suffix: str, cancel: threading.Event, keys: list, detail: str) -> dict:
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(data)
     try:
@@ -93,12 +96,20 @@ def work(data: bytes, suffix: str, cancel: threading.Event) -> dict:
             raise HTTPException(502, f"Whisper endpoint error: {e}")
         if cancel.is_set():
             raise Cancelled
-        summarizer = create_summarizer(config)
+        tpl = sections.build_template(keys, detail)
+        cfg = dataclasses.replace(
+            config,
+            summarization=dataclasses.replace(config.summarization, template="web", context_size=SUMMARY_CONTEXT),
+            templates={**config.templates, "web": TemplateConfig(**tpl)},
+        )
+        summarizer = create_summarizer(cfg)
         if not summarizer.is_available():
             raise HTTPException(502, f"Summarizer not reachable at {config.summarization.host}")
         try:
-            skey = hashlib.sha256(f"{config.summarization.model}|{transcript}".encode()).hexdigest()
-            summary = cached(f"{skey}.summary.md", lambda: summarizer.summarize(transcript))
+            cleaned = sections.clean_transcript(transcript)  # the model sees it tighter; the download stays raw
+            skey = hashlib.sha256(
+                f"{config.summarization.model}|{tpl['system_prompt']}|{tpl['prompt']}|{cleaned}".encode()).hexdigest()
+            summary = cached(f"{skey}.summary.md", lambda: summarizer.summarize(cleaned))
         finally:
             summarizer.close()
         return {"transcript": transcript, "summary": summary}
@@ -107,11 +118,20 @@ def work(data: bytes, suffix: str, cancel: threading.Event) -> dict:
 
 
 @app.post("/process")
-async def process(request: Request, file: UploadFile = File(...)):
+async def process(request: Request, file: UploadFile = File(...),
+                  selected: str | None = Form(None, alias="sections"), detail: str = Form("concise")):
     """Runs the job in a thread; if the browser disconnects (Cancel), stop before the next step."""
+    try:  # no field at all means "everything"; an explicit empty list is an error
+        wanted = sections.PROFILES["complete"] if selected is None else json.loads(selected)
+        keys = [k for k in wanted if k in {s["key"] for s in sections.SECTIONS}]
+    except (ValueError, TypeError):
+        keys = []
+    if not keys:
+        raise HTTPException(400, "Select at least one summary section.")
     cancel = threading.Event()
     job = asyncio.create_task(asyncio.to_thread(
-        work, await file.read(), Path(file.filename or "audio").suffix or ".wav", cancel))
+        work, await file.read(), Path(file.filename or "audio").suffix or ".wav", cancel, keys,
+        detail if detail in ("concise", "detailed") else "concise"))
     while not job.done():
         if await request.is_disconnected():
             cancel.set()  # ponytail: the in-flight Whisper/LLM call finishes first, then work stops
