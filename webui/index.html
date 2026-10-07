@@ -23,6 +23,11 @@ h1,h2{margin:0;font-size:1rem;font-weight:600}
 .picker{margin-top:1.5rem}
 .picker h2{font-size:1rem}
 .lists{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+.profiles{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1rem}
+.profiles button{padding:.55rem .4rem;font-size:.85rem}
+.profiles button.on{border-color:var(--blue-hi);background:#2b4a8a}
+.count{margin:.75rem 0 0;font-size:.85rem;color:var(--muted)}
+@media(max-width:520px){.profiles{grid-template-columns:1fr}}
 .list{margin:0;padding:0;border:0;min-width:0}
 .list legend{padding:0;margin-bottom:.6rem;font-size:.85rem;font-weight:600}
 .list.act legend{color:var(--act)}.list.info legend{color:var(--info)}
@@ -80,10 +85,16 @@ button:disabled{opacity:.55;cursor:wait}
  <input id="file" type="file" name="file" accept="audio/*,video/*" required>
 <div class="picker">
   <h2>Summary Sections</h2><p class="sub">Pick what the notes should include. Only the ticked sections are generated.</p>
+  <div class="profiles" id="profiles" role="group" aria-label="Section profiles">
+   <button type="button" data-p="action">Action Profile</button>
+   <button type="button" data-p="information">Information Profile</button>
+   <button type="button" data-p="complete">Complete Profile</button>
+  </div>
   <div class="lists">
    <fieldset class="list act"><legend>Action-oriented sections</legend><div class="opts" id="listAct"></div></fieldset>
    <fieldset class="list info"><legend>Information-oriented sections</legend><div class="opts" id="listInfo"></div></fieldset>
   </div>
+  <p class="count" id="count"></p>
  </div>
  <button id="go">Analyze Meeting</button>
  <button type="button" id="cancel" hidden>Cancel</button>
@@ -162,7 +173,18 @@ async function loadSections(){
   $(s.group==="action"?"listAct":"listInfo").insertAdjacentHTML("beforeend",
    `<label class="opt"><input type="checkbox" value="${s.key}" checked><span>${esc(s.label)}</span></label>`);
 }
-loadSections();
+const same=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
+function sync(){ // counter + highlight the profile that matches the current ticks exactly
+ const p=picked();$("count").textContent=`${p.length} of ${META.sections.length} selected`;
+ document.querySelectorAll("#profiles button").forEach(b=>b.classList.toggle("on",same(p,META.profiles[b.dataset.p]||[])));
+}
+$("profiles").onclick=e=>{
+ const b=e.target.closest("button");if(!b)return;
+ const set=META.profiles[b.dataset.p];
+ document.querySelectorAll(".opt input").forEach(i=>i.checked=set.includes(i.value));sync();
+};
+document.querySelector(".picker").addEventListener("change",sync);
+loadSections().then(sync);
 let ctl;
 // XMLHttpRequest because fetch cannot report upload progress; onUp(loaded,total) while sending, onUp(null) once the upload is done
 const send=(fd,onUp)=>new Promise((res,rej)=>{
