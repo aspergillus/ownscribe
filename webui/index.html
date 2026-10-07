@@ -28,10 +28,12 @@ button:hover,.btn:hover{background:#556074}
 button:disabled{opacity:.55;cursor:wait}
 #cancel{margin-top:.6rem}
 [hidden]{display:none!important}
-.bar{height:2px;margin-top:.9rem;border-radius:2px;overflow:hidden;display:none}
-.bar.on{display:block;background:linear-gradient(90deg,transparent,var(--blue-hi),transparent);background-size:200% 100%;animation:s 1.2s linear infinite}
-@keyframes s{to{background-position:-200% 0}}
-@media(prefers-reduced-motion:reduce){.bar.on{animation:none}}
+.bar{height:4px;margin-top:.9rem;border-radius:4px;overflow:hidden;display:none;background:var(--inset)}
+.bar.on{display:block}
+.bar i{display:block;height:100%;width:0;background:var(--blue-hi);transition:width .15s}
+.bar.wait i{width:35%;animation:s 1.1s ease-in-out infinite alternate}  /* indeterminate: server is working */
+@keyframes s{from{margin-left:0}to{margin-left:65%}}
+@media(prefers-reduced-motion:reduce){.bar.wait i{animation:none;width:100%}}
 /* status notice */
 .note{display:flex;align-items:center;gap:.6rem;margin-top:.9rem;padding:.65rem .9rem;border-radius:8px;border:1px solid var(--line);background:var(--inset);font-size:.9rem}
 .note::before{content:"";flex:none;width:.55rem;height:.55rem;border-radius:50%;background:var(--blue-hi)}
@@ -66,7 +68,7 @@ button:disabled{opacity:.55;cursor:wait}
  <input id="file" type="file" name="file" accept="audio/*,video/*" required>
  <button id="go">Analyze Meeting</button>
  <button type="button" id="cancel" hidden>Cancel</button>
- <div class="bar" id="bar"></div><div id="status" class="note" role="status" hidden></div>
+ <div class="bar" id="bar"><i id="fill"></i></div><div id="status" class="note" role="status" hidden></div>
 </form>
 <div id="results">
  <section class="panel">
@@ -133,15 +135,25 @@ file.onchange=show;
 ["dragleave","drop"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove("over")}));
 drop.addEventListener("drop",e=>{file.files=e.dataTransfer.files;show()});
 let ctl;
+// XMLHttpRequest because fetch cannot report upload progress; onUp(loaded,total) while sending, onUp(null) once the upload is done
+const send=(fd,onUp)=>new Promise((res,rej)=>{
+ const x=new XMLHttpRequest();x.open("POST","/process");
+ x.upload.onprogress=e=>e.lengthComputable&&onUp(e.loaded,e.total);
+ x.upload.onload=()=>onUp(null);
+ x.onload=()=>x.status>=200&&x.status<300?res(JSON.parse(x.responseText)):rej(new Error(x.responseText||x.statusText));
+ x.onerror=()=>rej(new Error("Network error"));
+ x.onabort=()=>rej(Object.assign(new Error("aborted"),{name:"AbortError"}));
+ ctl=x;x.send(fd)});
+const mb=n=>(n/1048576).toFixed(1);
 $("cancel").onclick=()=>ctl?.abort();
-$("f").onsubmit=async e=>{e.preventDefault();ctl=new AbortController();
- $("go").disabled=true;$("cancel").hidden=false;$("bar").classList.add("on");say("Processing…");
- $("results").classList.remove("on");
- try{const r=await fetch("/process",{method:"POST",body:new FormData($("f")),signal:ctl.signal});
-  if(!r.ok)throw new Error(await r.text());
-  const d=await r.json();
+$("f").onsubmit=async e=>{e.preventDefault();
+ $("go").disabled=true;$("cancel").hidden=false;$("results").classList.remove("on");
+ const bar=$("bar"),fill=$("fill");bar.className="bar on";fill.style.width="0";say("Uploading… 0%");
+ try{const d=await send(new FormData($("f")),(l,t)=>{
+   if(l===null){bar.classList.add("wait");fill.style.width="";say("Upload complete. Transcribing and summarizing…");return}
+   fill.style.width=(l/t*100)+"%";say(`Uploading… ${Math.round(l/t*100)}% (${mb(l)} / ${mb(t)} MB)`)});
   if(d.cancelled)say("Request cancelled.","cancelled");
   else{render(d,file.files[0]?.name);say("Done.","ok")}}
  catch(err){err.name==="AbortError"?say("Request cancelled.","cancelled"):say("Error: "+err.message,"error")}
- $("go").disabled=false;$("cancel").hidden=true;$("bar").classList.remove("on")};
+ $("go").disabled=false;$("cancel").hidden=true;$("bar").className="bar"};
 </script></body></html>
