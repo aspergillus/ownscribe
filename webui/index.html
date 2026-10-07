@@ -4,10 +4,10 @@
 <style>
 :root{--bg:#202938;--panel:#384252;--inset:#202938;--line:#4d586a;--text:#f3f4f6;--muted:#9ca3af;--blue:#2563eb;--blue-hi:#3b82f6;--act:#f0abfc;--info:#7dd3fc}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
 main{max-width:min(96vw,96rem);margin:0 auto;padding:2rem 16px 4rem;display:grid;gap:1rem}
 #f{width:100%;max-width:44rem;margin-inline:auto}  /* upload panel stays narrow; the analysis below uses the full width */
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.25rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.6rem}
 h1,h2{margin:0;font-size:1rem;font-weight:600}
 .sub{margin:.25rem 0 0;color:var(--muted);font-size:.9rem}
 /* drop zone */
@@ -67,17 +67,19 @@ button:disabled{opacity:.55;cursor:wait}
 /* results */
 #results{display:none}
 #results.on{display:grid;gap:1rem}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:1rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.75rem;margin-top:1.25rem}
 .col{min-width:0}
 .col[hidden]{display:none}
 .cols.one{grid-template-columns:1fr}
-.col>h3{margin:0 0 .6rem;font-size:.95rem;font-weight:600}
+.col>h3{margin:0 0 .75rem;font-size:.95rem;font-weight:600}
 .col.act>h3{color:var(--act)}.col.info>h3{color:var(--info)}
-.box{background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:.35rem .9rem}
-.card{padding:.75rem 0;border-bottom:1px solid var(--line);contain:layout paint style;content-visibility:auto;contain-intrinsic-size:auto 9rem}
+.box{background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:.5rem 1.4rem}
+.card{padding:1.15rem 0;border-bottom:1px solid var(--line);contain:layout paint style;content-visibility:auto;contain-intrinsic-size:auto 9rem}
 .card:last-child{border-bottom:0}
-.card h4{margin:0 0 .35rem;font-size:.95rem}
-.card p{margin:0}.card ul{margin:0;padding-left:1.15rem}.card li{margin:.2rem 0}.card ul ul{margin:.1rem 0}
+.card h4{margin:0 0 .6rem;font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+#act .card h4{color:var(--act)}#info .card h4{color:var(--info)}
+.card.lead p{font-size:1.08rem;line-height:1.7}
+.card p{margin:0}.card ul{margin:0;padding-left:1.2rem}.card li{margin:.5rem 0;padding-left:.15rem}.card li::marker{color:var(--blue-hi)}.card ul ul{margin:.2rem 0}
 .empty{margin:.75rem 0;color:var(--muted);font-style:italic}
 .dls{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:1rem}
 @media(max-width:700px){.cols,.dls{grid-template-columns:1fr}}
@@ -161,13 +163,13 @@ function render(d,fname,keys=META.profiles.complete){
  // The model was asked for exactly the selected headings, so match by label; group and order come from the server's list.
  const chosen=META.sections.filter(m=>keys.includes(m.key));
  const parsed=new Map(sections(d.summary).map(x=>[x.title.toLowerCase(),x]));
- const card=(title,lines)=>{
+ const card=(title,lines,cls="")=>{
   const text=lines.join("\n").trim();
   const inner=!text||/^none mentioned\.?$/i.test(text)?'<p class="empty">None mentioned.</p>':body(lines);
-  return `<div class="card"><h4>${esc(title)}</h4>${inner}</div>`;
+  return `<div class="card ${cls}"><h4>${esc(title)}</h4>${inner}</div>`;
  };
  const cols={action:[],info:[]};
- for(const m of chosen){const x=parsed.get(m.label.toLowerCase());cols[m.group].push(card(m.label,x?x.lines:[]))}
+ for(const m of chosen){const x=parsed.get(m.label.toLowerCase());cols[m.group].push(card(m.label,x?x.lines:[],m.key==="exec_summary"?"lead":""))}
  if(![...parsed.keys()].some(t=>chosen.some(m=>m.label.toLowerCase()===t))) // model ignored the headings: show what it wrote
   for(const x of parsed.values())cols.info.push(card(x.title,x.lines));
  $("act").innerHTML=cols.action.join("");$("info").innerHTML=cols.info.join("");
