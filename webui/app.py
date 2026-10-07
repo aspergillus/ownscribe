@@ -15,6 +15,7 @@ from fastapi.responses import HTMLResponse
 import openai
 from ownscribe.config import Config
 from ownscribe.summarization import create_summarizer
+from webui import sections
 
 ROOT = Path(__file__).resolve().parent.parent
 for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
@@ -73,6 +74,12 @@ def transcribe(path: str, cancel: threading.Event, key: str) -> str:
 @app.get("/", response_class=HTMLResponse)
 def index():
     return (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/api/sections")
+def api_sections():
+    """The selectable summary sections and the profile presets, so the page never hard-codes them."""
+    return {"sections": sections.SECTIONS, "profiles": sections.PROFILES}
 
 
 def work(data: bytes, suffix: str, cancel: threading.Event) -> dict:
