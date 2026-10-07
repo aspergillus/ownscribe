@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 
@@ -36,3 +37,22 @@ def test_detailed_raises_the_caps():
     detailed = sections.build_template(["key_points"], "detailed")["prompt"]
     assert "At most 6 bullets" in concise and "20 words" in concise
     assert "At most 12 bullets" in detailed and "30 words" in detailed
+
+
+def test_clean_transcript_drops_fillers_and_repeats_but_keeps_content():
+    text = (
+        "Okay. Yeah okay. We launch the project in November. Alice will send the budget report on Friday. "
+        "Alice will send the budget report on Friday. Alice will send the budget reports on Friday. "
+        "Bob books the room. Thank you."
+    )
+    assert sections.clean_transcript(text) == (
+        "We launch the project in November. Alice will send the budget report on Friday. Bob books the room."
+    )
+
+
+def test_clean_transcript_collapses_immediate_repeats_but_keeps_distant_short_sentences():
+    far = " ".join(f"Item {hashlib.md5(str(i).encode()).hexdigest()} was reviewed today." for i in range(25))
+    text = f"We agreed. We agreed. {far} We agreed."
+    out = sections.clean_transcript(text)
+    assert out.startswith("We agreed. Item ")  # immediate repeat collapsed
+    assert out.endswith("We agreed.")  # same short sentence much later is kept
