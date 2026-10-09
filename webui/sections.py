@@ -27,10 +27,13 @@ PROFILES = {
 # Per-section instruction; {n} is the item cap, {words} the words-per-item range, both from _LIMITS.
 _RULES = {
     "exec_summary": "{n} sentences of plain prose: what the meeting was for and what came out of it.",
-    "main_discussions": "At most {n} bullets ({words} words each), each `**Topic** - the outcome`.",
+    "main_discussions": (
+        "At most {n} bullets, each `**Topic** - ` followed by 2-3 complete sentences ({words} words in total) "
+        "covering what was discussed, the positions or reasons given, and the outcome."
+    ),
     "action_plan": (
-        "At most {n} bullets ({words} words each), each `**Owner** - task (deadline if stated)`. "
-        "Explicit commitments only."
+        "At most {n} bullets, each `**Owner** - ` followed by the task as a full sentence ({words} words), "
+        "with the context if stated and the deadline if stated. Explicit commitments only."
     ),
     "decisions": (
         "At most {n} bullets ({words} words each). Only decisions that were explicitly made, "
@@ -44,7 +47,10 @@ _RULES = {
         "A reader must understand it without the transcript. No fragments, labels or telegraphic phrasing. "
         "Only the major points."
     ),
-    "questions": "At most {n} bullets ({words} words each): questions left unanswered or points still being debated.",
+    "questions": (
+        "At most {n} bullets ({words} words each): a question left unanswered or a point still being debated, "
+        "with one clause on why it is still open."
+    ),
     "follow_up": "At most {n} bullets ({words} words each): documents, data or people that need follow-up later.",
 }
 # (max items, words per item) per section; main_topics/exec_summary use words=None (their rules fix the wording).
@@ -62,8 +68,11 @@ _LIMITS = {
 }
 
 _SYSTEM = (
-    "You turn meeting transcripts into short, scannable notes. Be selective: report what matters, "
-    "not everything that was said."
+    "You turn meeting transcripts into clear, well-organised notes. Be selective and never pad: report what "
+    "matters, not everything that was said. Four sections deserve the most depth and the fullest sentences: "
+    "Main Discussions, Key Points, Action Plan and Questions & Discussions. Cover those thoroughly and "
+    "completely. The other sections (Executive Summary, Decisions Made, Next Steps, Main Topics, "
+    "Follow-up Elements) stay shorter but must still be accurate and complete."
 )
 
 _PROMPT = """Write notes for the transcript below.

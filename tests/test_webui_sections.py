@@ -53,6 +53,23 @@ def test_priority_sections_get_longer_items_than_secondary_ones():
     assert "15-25" in prompt.split("## Decisions Made")[1]
 
 
+def test_system_prompt_names_the_four_priority_sections():
+    system = sections.build_template(["key_points"])["system_prompt"]
+    for label in ("Main Discussions", "Key Points", "Action Plan", "Questions & Discussions"):
+        assert label in system
+
+
+def test_action_plan_word_ranges():
+    assert "25-45" in sections.build_template(["action_plan"], "concise")["prompt"]
+    assert "35-60" in sections.build_template(["action_plan"], "detailed")["prompt"]
+
+
+def test_complete_profile_formats_with_one_placeholder():
+    prompt = sections.build_template(sections.PROFILES["complete"])["prompt"]
+    assert prompt.count("{") == 1 and prompt.count("}") == 1
+    assert "hello" in prompt.format(transcript="hello")
+
+
 def test_unknown_detail_falls_back_to_concise():
     keys = sections.PROFILES["complete"]
     assert sections.build_template(keys, "bogus") == sections.build_template(keys, "concise")
