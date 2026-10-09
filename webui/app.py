@@ -33,8 +33,8 @@ WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "whisper-large-v3")  # served by
 SUMMARY_CONTEXT = int(os.environ.get("SUMMARY_CONTEXT", "32768"))  # tokens; bigger = fewer chunks, lower it if the model rejects long prompts
 SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "8192"))  # output cap; without one the endpoint may cut long notes short
 # This endpoint's model "thinks" by default and the hidden reasoning tokens count against the output cap, which cut long
-# notes off. Summaries are extraction, so reasoning is off ("none"); set to "low"/"medium" to trade speed for depth.
-SUMMARY_REASONING = os.environ.get("SUMMARY_REASONING", "none")
+# notes off. "none" is fastest but undershoots the word targets; "low" meets them in ~25 s. Raise it for more depth.
+SUMMARY_REASONING = os.environ.get("SUMMARY_REASONING", "low")
 client = openai.OpenAI(base_url=config.summarization.host, api_key=config.summarization.api_key or "not-needed")
 
 app = FastAPI(title="meetingnotes")
