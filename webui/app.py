@@ -31,7 +31,7 @@ config.summarization.host = os.environ.get("OPENAI_BASE_URL", config.summarizati
 
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "whisper-large-v3")  # served by the remote endpoint, nothing runs locally
 SUMMARY_CONTEXT = int(os.environ.get("SUMMARY_CONTEXT", "32768"))  # tokens; bigger = fewer chunks, lower it if the model rejects long prompts
-SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "8192"))  # output cap; without one the endpoint may cut long notes short
+SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "16384"))  # output cap; without one the endpoint may cut long notes short
 # This endpoint's model "thinks" by default and the hidden reasoning tokens count against the output cap, which cut long
 # notes off. "none" is fastest but undershoots the word targets; "low" meets them in ~25 s. Raise it for more depth.
 SUMMARY_REASONING = os.environ.get("SUMMARY_REASONING", "low")
