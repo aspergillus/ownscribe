@@ -35,21 +35,21 @@ def test_prompt_only_uses_braces_for_the_transcript_placeholder():
 def test_detailed_raises_the_caps():
     concise = sections.build_template(["key_points"], "concise")["prompt"]
     detailed = sections.build_template(["key_points"], "detailed")["prompt"]
-    assert "At most 6 bullets" in concise and "45-70 words" in concise
-    assert "At most 10 bullets" in detailed and "70-110 words" in detailed
+    assert "At most 6 bullets" in concise and "30-50 words" in concise
+    assert "At most 10 bullets" in detailed and "45-70 words" in detailed
 
 
 def test_key_points_are_complete_explanatory_sentences():
     concise = sections.build_template(["key_points"], "concise")["prompt"]
     detailed = sections.build_template(["key_points"], "detailed")["prompt"]
-    assert "complete, self-contained sentence" in concise and "45-70" in concise
-    assert "complete, self-contained sentence" in detailed and "70-110" in detailed
+    assert "complete, self-contained sentence" in concise and "30-50" in concise
+    assert "complete, self-contained sentence" in detailed and "45-70" in detailed
     assert "20 words" not in concise
 
 
 def test_priority_sections_get_longer_items_than_secondary_ones():
     prompt = sections.build_template(["main_discussions", "decisions"], "concise")["prompt"]
-    assert "60-90" in prompt.split("## Decisions Made")[0]
+    assert "40-60" in prompt.split("## Decisions Made")[0]
     assert "15-25" in prompt.split("## Decisions Made")[1]
 
 
@@ -60,8 +60,8 @@ def test_system_prompt_names_the_four_priority_sections():
 
 
 def test_action_plan_word_ranges():
-    assert "25-45" in sections.build_template(["action_plan"], "concise")["prompt"]
-    assert "35-60" in sections.build_template(["action_plan"], "detailed")["prompt"]
+    assert "15-30" in sections.build_template(["action_plan"], "concise")["prompt"]
+    assert "20-40" in sections.build_template(["action_plan"], "detailed")["prompt"]
 
 
 def test_complete_profile_formats_with_one_placeholder():

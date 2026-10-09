@@ -56,13 +56,13 @@ _RULES = {
 # (max items, words per item) per section; main_topics/exec_summary use words=None (their rules fix the wording).
 _LIMITS = {
     "concise": {
-        "main_discussions": (6, "60-90"), "key_points": (6, "45-70"), "action_plan": (8, "25-45"),
-        "questions": (6, "35-60"), "decisions": (5, "15-25"), "next_steps": (4, "12-20"),
+        "main_discussions": (6, "40-60"), "key_points": (6, "30-50"), "action_plan": (8, "15-30"),
+        "questions": (6, "20-40"), "decisions": (5, "15-25"), "next_steps": (4, "12-20"),
         "follow_up": (4, "10-20"), "main_topics": (6, None), "exec_summary": ("3-4", None),
     },
     "detailed": {
-        "main_discussions": (10, "90-130"), "key_points": (10, "70-110"), "action_plan": (14, "35-60"),
-        "questions": (10, "50-80"), "decisions": (8, "20-35"), "next_steps": (6, "15-30"),
+        "main_discussions": (10, "60-90"), "key_points": (10, "45-70"), "action_plan": (14, "20-40"),
+        "questions": (10, "30-55"), "decisions": (8, "20-35"), "next_steps": (6, "15-30"),
         "follow_up": (6, "15-30"), "main_topics": (8, None), "exec_summary": ("4-6", None),
     },
 }
