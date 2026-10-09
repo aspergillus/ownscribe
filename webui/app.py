@@ -32,6 +32,9 @@ config.summarization.host = os.environ.get("OPENAI_BASE_URL", config.summarizati
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "whisper-large-v3")  # served by the remote endpoint, nothing runs locally
 SUMMARY_CONTEXT = int(os.environ.get("SUMMARY_CONTEXT", "32768"))  # tokens; bigger = fewer chunks, lower it if the model rejects long prompts
 SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "8192"))  # output cap; without one the endpoint may cut long notes short
+# This endpoint's model "thinks" by default and the hidden reasoning tokens count against the output cap, which cut long
+# notes off. Summaries are extraction, so reasoning is off ("none"); set to "low"/"medium" to trade speed for depth.
+SUMMARY_REASONING = os.environ.get("SUMMARY_REASONING", "none")
 client = openai.OpenAI(base_url=config.summarization.host, api_key=config.summarization.api_key or "not-needed")
 
 app = FastAPI(title="meetingnotes")
@@ -42,7 +45,7 @@ class WebSummarizer(OpenAISummarizer):
 
     def _complete(self, system_prompt: str, user_prompt: str) -> str:
         r = self._client.chat.completions.create(
-            model=self._config.model, max_tokens=SUMMARY_MAX_TOKENS,
+            model=self._config.model, max_tokens=SUMMARY_MAX_TOKENS, reasoning_effort=SUMMARY_REASONING,
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}])
         if r.choices[0].finish_reason == "length":  # raising keeps the half-written notes out of the cache
             raise HTTPException(502, "The notes were cut off by the model's output limit. Try Concise or fewer sections.")
