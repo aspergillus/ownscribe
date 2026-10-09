@@ -24,26 +24,41 @@ PROFILES = {
     "complete": [s["key"] for s in SECTIONS],
 }
 
-# Per-section instruction; {n} is the item cap, {w} the words-per-sentence cap. Detailed mode doubles n and raises w.
+# Per-section instruction; {n} is the item cap, {words} the words-per-item range, both from _LIMITS.
 _RULES = {
-    "exec_summary": "2-3 sentences of plain prose: what the meeting was for and what came out of it.",
-    "main_discussions": "At most {n} bullets, each `**Topic** - the outcome in one line`.",
-    "action_plan": "At most {n} bullets, each `**Owner** - task (deadline if stated)`. Explicit commitments only.",
-    "decisions": "At most {n} bullets. Only decisions that were explicitly made, not ideas that were floated.",
-    "next_steps": "At most {n} bullets: the upcoming steps in chronological order.",
+    "exec_summary": "{n} sentences of plain prose: what the meeting was for and what came out of it.",
+    "main_discussions": "At most {n} bullets ({words} words each), each `**Topic** - the outcome`.",
+    "action_plan": (
+        "At most {n} bullets ({words} words each), each `**Owner** - task (deadline if stated)`. "
+        "Explicit commitments only."
+    ),
+    "decisions": (
+        "At most {n} bullets ({words} words each). Only decisions that were explicitly made, "
+        "not ideas that were floated."
+    ),
+    "next_steps": "At most {n} bullets ({words} words each): the upcoming steps in chronological order.",
     "main_topics": "At most {n} short labels of 2-5 words each. No full sentences.",
     "key_points": (
-        "At most {n} bullets. Each bullet is one complete, self-contained sentence (two at most) of {kw} words "
+        "At most {n} bullets. Each bullet is one complete, self-contained sentence (two at most) of {words} words "
         "that explains the full scenario: who or what is involved, the context, and why it matters or what follows. "
         "A reader must understand it without the transcript. No fragments, labels or telegraphic phrasing. "
         "Only the major points."
     ),
-    "questions": "At most {n} bullets: questions left unanswered or points still being debated.",
-    "follow_up": "At most {n} bullets: documents, data or people that need follow-up later.",
+    "questions": "At most {n} bullets ({words} words each): questions left unanswered or points still being debated.",
+    "follow_up": "At most {n} bullets ({words} words each): documents, data or people that need follow-up later.",
 }
-_CAPS = {
-    "concise": {"n": 6, "w": 20, "kw": "45-70"},
-    "detailed": {"n": 12, "w": 30, "kw": "70-110"},
+# (max items, words per item) per section; main_topics/exec_summary use words=None (their rules fix the wording).
+_LIMITS = {
+    "concise": {
+        "main_discussions": (6, "60-90"), "key_points": (6, "45-70"), "action_plan": (8, "25-45"),
+        "questions": (6, "35-60"), "decisions": (5, "15-25"), "next_steps": (4, "12-20"),
+        "follow_up": (4, "10-20"), "main_topics": (6, None), "exec_summary": ("3-4", None),
+    },
+    "detailed": {
+        "main_discussions": (10, "90-130"), "key_points": (10, "70-110"), "action_plan": (14, "35-60"),
+        "questions": (10, "50-80"), "decisions": (8, "20-35"), "next_steps": (6, "15-30"),
+        "follow_up": (6, "15-30"), "main_topics": (8, None), "exec_summary": ("4-6", None),
+    },
 }
 
 _SYSTEM = (
@@ -75,9 +90,12 @@ def build_template(keys, detail="concise"):
 
     The prompt keeps a literal {transcript} placeholder (ownscribe fills it with str.format).
     """
-    caps = _CAPS.get(detail, _CAPS["concise"])
+    limits = _LIMITS.get(detail, _LIMITS["concise"])
     chosen = [s for s in SECTIONS if s["key"] in set(keys)]
-    block = "\n\n".join(f"## {s['label']}\n{_RULES[s['key']].format(**caps)}" for s in chosen)
+    block = "\n\n".join(
+        f"## {s['label']}\n{_RULES[s['key']].format(n=limits[s['key']][0], words=limits[s['key']][1])}"
+        for s in chosen
+    )
     return {"system_prompt": _SYSTEM, "prompt": _PROMPT.format(sections=block)}
 
 

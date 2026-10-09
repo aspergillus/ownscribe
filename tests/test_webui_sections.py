@@ -36,7 +36,7 @@ def test_detailed_raises_the_caps():
     concise = sections.build_template(["key_points"], "concise")["prompt"]
     detailed = sections.build_template(["key_points"], "detailed")["prompt"]
     assert "At most 6 bullets" in concise and "45-70 words" in concise
-    assert "At most 12 bullets" in detailed and "70-110 words" in detailed
+    assert "At most 10 bullets" in detailed and "70-110 words" in detailed
 
 
 def test_key_points_are_complete_explanatory_sentences():
@@ -45,6 +45,17 @@ def test_key_points_are_complete_explanatory_sentences():
     assert "complete, self-contained sentence" in concise and "45-70" in concise
     assert "complete, self-contained sentence" in detailed and "70-110" in detailed
     assert "20 words" not in concise
+
+
+def test_priority_sections_get_longer_items_than_secondary_ones():
+    prompt = sections.build_template(["main_discussions", "decisions"], "concise")["prompt"]
+    assert "60-90" in prompt.split("## Decisions Made")[0]
+    assert "15-25" in prompt.split("## Decisions Made")[1]
+
+
+def test_unknown_detail_falls_back_to_concise():
+    keys = sections.PROFILES["complete"]
+    assert sections.build_template(keys, "bogus") == sections.build_template(keys, "concise")
 
 
 def test_clean_transcript_drops_fillers_and_repeats_but_keeps_content():
