@@ -80,6 +80,7 @@ button:disabled{opacity:.55;cursor:wait}
 .copy{width:auto;display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .6rem;margin:0;font-size:.78rem;font-weight:600;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px}
 .copy:hover{color:var(--text);background:#2c3648}
 .copy svg{width:14px;height:14px}
+.copy.done{color:var(--text);border-color:var(--blue-hi)}
 .copy:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px}
 .card h4{margin:0;font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 #act .card h4{color:var(--act)}#info .card h4{color:var(--info)}
@@ -165,6 +166,24 @@ function sections(md){ // [{title, lines}] split on "## " headings
  return out;
 }
 let COPY=[]; // plain text per card; the DOM can't be used (content-visibility hides off-screen text)
+function copyText(text){
+ if(navigator.clipboard)return navigator.clipboard.writeText(text);
+ return new Promise((ok,fail)=>{
+  const t=document.createElement("textarea");
+  t.value=text;t.style.cssText="position:fixed;opacity:0";
+  document.body.appendChild(t);t.select();
+  try{document.execCommand("copy")?ok():fail(new Error("copy failed"))}catch(e){fail(e)}finally{t.remove()}
+ });
+}
+$("results").addEventListener("click",async e=>{
+ const btn=e.target.closest(".copy");if(!btn)return;
+ const label=btn.querySelector("span");
+ let msg="Copied";
+ try{await copyText(COPY[btn.dataset.i])}catch{msg="Failed"}
+ label.textContent=msg;btn.classList.add("done");
+ clearTimeout(btn._t);
+ btn._t=setTimeout(()=>{label.textContent="Copy";btn.classList.remove("done")},1500);
+});
 function render(d,fname,keys=META.profiles.complete){
  COPY=[];
  // The model was asked for exactly the selected headings, so match by label; group and order come from the server's list.
@@ -176,7 +195,7 @@ function render(d,fname,keys=META.profiles.complete){
   const plain=text&&!/^none mentioned\.?$/i.test(text)?lines.join("\n").replace(/\*\*(.+?)\*\*/g,"$1").trim():"None mentioned.";
   const i=COPY.push(title+"\n"+plain)-1;
   const icon='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-  return `<div class="card ${cls}"><div class="card-head"><h4>${esc(title)}</h4><button type="button" class="copy" data-i="${i}" aria-label="Copy ${esc(title)}">${icon}<span>Copy</span></button></div>${inner}</div>`;
+  return `<div class="card ${cls}"><div class="card-head"><h4>${esc(title)}</h4><button type="button" class="copy" data-i="${i}" aria-label="Copy ${esc(title)}">${icon}<span aria-live="polite">Copy</span></button></div>${inner}</div>`;
  };
  const cols={action:[],info:[]};
  for(const m of chosen){const x=parsed.get(m.label.toLowerCase());cols[m.group].push(card(m.label,x?x.lines:[],m.key==="exec_summary"?"lead":""))}
