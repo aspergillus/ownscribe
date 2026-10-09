@@ -44,12 +44,16 @@ class WebSummarizer(OpenAISummarizer):
     """OpenAI summarizer that sets an output limit and refuses answers the model cut off."""
 
     def _complete(self, system_prompt: str, user_prompt: str) -> str:
-        r = self._client.chat.completions.create(
-            model=self._config.model, max_tokens=SUMMARY_MAX_TOKENS, reasoning_effort=SUMMARY_REASONING,
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}])
-        if r.choices[0].finish_reason == "length":  # raising keeps the half-written notes out of the cache
-            raise HTTPException(502, "The notes were cut off by the model's output limit. Try Concise or fewer sections.")
-        return clean_response(r.choices[0].message.content or "")
+        # Hidden reasoning shares the output cap, so a long run can be cut off. Retry once with reasoning off,
+        # which always fits; only if that is cut off too do we fail (raising keeps half-written notes out of the cache).
+        for effort in dict.fromkeys([SUMMARY_REASONING, "none"]):
+            r = self._client.chat.completions.create(
+                model=self._config.model, max_tokens=SUMMARY_MAX_TOKENS, reasoning_effort=effort,
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}])
+            if r.choices[0].finish_reason != "length":
+                return clean_response(r.choices[0].message.content or "")
+            log.warning("notes cut off at %d tokens with reasoning=%s", SUMMARY_MAX_TOKENS, effort)
+        raise HTTPException(502, "The notes were cut off by the model's output limit. Try Concise or fewer sections.")
 log = logging.getLogger("uvicorn.error")
 
 CACHE = Path(__file__).parent / ".cache"  # ponytail: plain files, no eviction; delete the folder to reset
