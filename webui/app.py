@@ -16,7 +16,8 @@ from fastapi.responses import HTMLResponse
 
 import openai
 from ownscribe.config import Config, TemplateConfig
-from ownscribe.summarization import create_summarizer
+from ownscribe.summarization.openai_summarizer import OpenAISummarizer
+from ownscribe.summarization.prompts import clean_response
 from webui import sections
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,9 +31,22 @@ config.summarization.host = os.environ.get("OPENAI_BASE_URL", config.summarizati
 
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "whisper-large-v3")  # served by the remote endpoint, nothing runs locally
 SUMMARY_CONTEXT = int(os.environ.get("SUMMARY_CONTEXT", "32768"))  # tokens; bigger = fewer chunks, lower it if the model rejects long prompts
+SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "8192"))  # output cap; without one the endpoint may cut long notes short
 client = openai.OpenAI(base_url=config.summarization.host, api_key=config.summarization.api_key or "not-needed")
 
 app = FastAPI(title="meetingnotes")
+
+
+class WebSummarizer(OpenAISummarizer):
+    """OpenAI summarizer that sets an output limit and refuses answers the model cut off."""
+
+    def _complete(self, system_prompt: str, user_prompt: str) -> str:
+        r = self._client.chat.completions.create(
+            model=self._config.model, max_tokens=SUMMARY_MAX_TOKENS,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}])
+        if r.choices[0].finish_reason == "length":  # raising keeps the half-written notes out of the cache
+            raise HTTPException(502, "The notes were cut off by the model's output limit. Try Concise or fewer sections.")
+        return clean_response(r.choices[0].message.content or "")
 log = logging.getLogger("uvicorn.error")
 
 CACHE = Path(__file__).parent / ".cache"  # ponytail: plain files, no eviction; delete the folder to reset
@@ -102,7 +116,7 @@ def work(data: bytes, suffix: str, cancel: threading.Event, keys: list, detail: 
             summarization=dataclasses.replace(config.summarization, template="web", context_size=SUMMARY_CONTEXT),
             templates={**config.templates, "web": TemplateConfig(**tpl)},
         )
-        summarizer = create_summarizer(cfg)
+        summarizer = WebSummarizer(cfg.summarization, cfg.templates)
         if not summarizer.is_available():
             raise HTTPException(502, f"Summarizer not reachable at {config.summarization.host}")
         try:
