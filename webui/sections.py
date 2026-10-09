@@ -132,3 +132,33 @@ def clean_transcript(text):
         window = (window + [n])[-20:]  # ponytail: only recent sentences are fuzzy-compared; O(n*20)
         kept.append(sentence.strip())
     return " ".join(kept)
+
+
+_LIST_ITEM = re.compile(r"^(\s*)(?:[-*]|\d+[.)])\s+")
+
+
+def normalize_lists(markdown):
+    """Make every section except the Executive Summary a '- ' bullet list.
+
+    With long items some models skip the list instruction and write one paragraph per item; this restores the list.
+    """
+    out = []
+    for block in re.split(r"(?m)^(?=## )", markdown.strip()):
+        if not block.strip():  # the split yields an empty first piece when the text starts with a heading
+            continue
+        head, _, body = block.partition("\n")
+        text = body.strip()
+        if not head.startswith("## ") or head[3:].strip().lower() == "executive summary" or not text \
+                or re.fullmatch(r"(?i)none mentioned\.?", text):
+            out.append(block.strip())
+            continue
+        lines = text.splitlines()
+        if any(_LIST_ITEM.match(line) for line in lines):  # already a list: only unify the markers
+            text = "\n".join(_LIST_ITEM.sub(r"\1- ", line) for line in lines)
+        else:
+            items = re.split(r"\n\s*\n", text)
+            if len(items) == 1:  # no blank lines: one item per line
+                items = lines
+            text = "\n".join(f"- {' '.join(item.split())}" for item in items if item.strip())
+        out.append(f"{head}\n{text}")
+    return "\n\n".join(out)

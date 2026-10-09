@@ -98,3 +98,30 @@ def test_prompt_requires_list_format_for_every_section_but_the_summary():
     prompt = sections.build_template(["key_points", "exec_summary"], "detailed")["prompt"]
     assert "Every section except Executive Summary is a markdown list" in prompt
     assert "starting with `- `" in prompt
+
+
+def test_normalize_lists_turns_paragraph_items_into_bullets():
+    raw = (
+        "## Key Points\nFirst full sentence here.\n\nSecond one,\nwrapped over two lines.\n\n"
+        "## Action Plan\n**Ann** - send it.\n**Bob** - book it."
+    )
+    assert sections.normalize_lists(raw) == (
+        "## Key Points\n- First full sentence here.\n- Second one, wrapped over two lines.\n\n"
+        "## Action Plan\n- **Ann** - send it.\n- **Bob** - book it."
+    )
+
+
+def test_normalize_lists_keeps_existing_lists_summary_and_empty_sections():
+    raw = (
+        "## Executive Summary\nProse stays as prose.\n\nSecond paragraph.\n\n"
+        "## Decisions Made\n* one\n1. two\n  - nested\n\n## Follow-up Elements\nNone mentioned."
+    )
+    assert sections.normalize_lists(raw) == (
+        "## Executive Summary\nProse stays as prose.\n\nSecond paragraph.\n\n"
+        "## Decisions Made\n- one\n- two\n  - nested\n\n## Follow-up Elements\nNone mentioned."
+    )
+
+
+def test_normalize_lists_is_idempotent():
+    once = sections.normalize_lists("## Key Points\nA.\n\nB.")
+    assert sections.normalize_lists(once) == once
