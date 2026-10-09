@@ -76,7 +76,12 @@ button:disabled{opacity:.55;cursor:wait}
 .box{background:var(--inset);border:1px solid var(--line);border-radius:10px;padding:.5rem 1.4rem}
 .card{padding:1.15rem 0;border-bottom:1px solid var(--line);contain:layout paint style;content-visibility:auto;contain-intrinsic-size:auto 9rem}
 .card:last-child{border-bottom:0}
-.card h4{margin:0 0 .6rem;font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.6rem}
+.copy{width:auto;display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .6rem;margin:0;font-size:.78rem;font-weight:600;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:6px}
+.copy:hover{color:var(--text);background:#2c3648}
+.copy svg{width:14px;height:14px}
+.copy:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px}
+.card h4{margin:0;font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 #act .card h4{color:var(--act)}#info .card h4{color:var(--info)}
 .card.lead p{font-size:1.08rem;line-height:1.7}
 .card p{margin:0}.card ul{margin:0;padding-left:1.2rem}.card li{margin:.5rem 0;padding-left:.15rem}.card li::marker{color:var(--blue-hi)}.card ul ul{margin:.2rem 0}
@@ -159,14 +164,19 @@ function sections(md){ // [{title, lines}] split on "## " headings
  }
  return out;
 }
+let COPY=[]; // plain text per card; the DOM can't be used (content-visibility hides off-screen text)
 function render(d,fname,keys=META.profiles.complete){
+ COPY=[];
  // The model was asked for exactly the selected headings, so match by label; group and order come from the server's list.
  const chosen=META.sections.filter(m=>keys.includes(m.key));
  const parsed=new Map(sections(d.summary).map(x=>[x.title.toLowerCase(),x]));
  const card=(title,lines,cls="")=>{
   const text=lines.join("\n").trim();
   const inner=!text||/^none mentioned\.?$/i.test(text)?'<p class="empty">None mentioned.</p>':body(lines);
-  return `<div class="card ${cls}"><h4>${esc(title)}</h4>${inner}</div>`;
+  const plain=text&&!/^none mentioned\.?$/i.test(text)?lines.join("\n").replace(/\*\*(.+?)\*\*/g,"$1").trim():"None mentioned.";
+  const i=COPY.push(title+"\n"+plain)-1;
+  const icon='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+  return `<div class="card ${cls}"><div class="card-head"><h4>${esc(title)}</h4><button type="button" class="copy" data-i="${i}" aria-label="Copy ${esc(title)}">${icon}<span>Copy</span></button></div>${inner}</div>`;
  };
  const cols={action:[],info:[]};
  for(const m of chosen){const x=parsed.get(m.label.toLowerCase());cols[m.group].push(card(m.label,x?x.lines:[],m.key==="exec_summary"?"lead":""))}
