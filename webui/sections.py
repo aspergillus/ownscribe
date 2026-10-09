@@ -83,6 +83,7 @@ Output ONLY these sections, in this order, each starting with exactly the headin
 
 Rules:
 - No introduction, no closing remarks, no sections other than the ones above.
+- Every section except Executive Summary is a markdown list: one item per line, each line starting with `- `. Never merge several items into a paragraph, however long the items are.
 - The transcript may repeat itself. Mention each fact once, and never repeat an item across sections.
 - Ignore greetings, filler and off-topic chatter. Do not invent owners, dates or facts.
 - If nothing in the transcript fits a section, write exactly `None mentioned.` under its heading.

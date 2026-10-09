@@ -92,3 +92,9 @@ def test_clean_transcript_collapses_immediate_repeats_but_keeps_distant_short_se
     out = sections.clean_transcript(text)
     assert out.startswith("We agreed. Item ")  # immediate repeat collapsed
     assert out.endswith("We agreed.")  # same short sentence much later is kept
+
+
+def test_prompt_requires_list_format_for_every_section_but_the_summary():
+    prompt = sections.build_template(["key_points", "exec_summary"], "detailed")["prompt"]
+    assert "Every section except Executive Summary is a markdown list" in prompt
+    assert "starting with `- `" in prompt
