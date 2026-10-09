@@ -126,7 +126,7 @@ def work(data: bytes, suffix: str, cancel: threading.Event, keys: list, detail: 
             cleaned = sections.clean_transcript(transcript)  # the model sees it tighter; the download stays raw
             skey = hashlib.sha256(
                 f"{config.summarization.model}|{tpl['system_prompt']}|{tpl['prompt']}|{cleaned}".encode()).hexdigest()
-            summary = cached(f"{skey}.summary.md", lambda: summarizer.summarize(cleaned))
+            summary = cached(f"{skey}.summary.md", lambda: sections.normalize_lists(summarizer.summarize(cleaned)))
         finally:
             summarizer.close()
         return {"transcript": transcript, "summary": summary}
