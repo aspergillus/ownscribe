@@ -32,11 +32,19 @@ _RULES = {
     "decisions": "At most {n} bullets. Only decisions that were explicitly made, not ideas that were floated.",
     "next_steps": "At most {n} bullets: the upcoming steps in chronological order.",
     "main_topics": "At most {n} short labels of 2-5 words each. No full sentences.",
-    "key_points": "At most {n} bullets, one sentence of at most {w} words each. Only the major facts or conclusions.",
+    "key_points": (
+        "At most {n} bullets. Each bullet is one complete, self-contained sentence (two at most) of {kw} words "
+        "that explains the full scenario: who or what is involved, the context, and why it matters or what follows. "
+        "A reader must understand it without the transcript. No fragments, labels or telegraphic phrasing. "
+        "Only the major points."
+    ),
     "questions": "At most {n} bullets: questions left unanswered or points still being debated.",
     "follow_up": "At most {n} bullets: documents, data or people that need follow-up later.",
 }
-_CAPS = {"concise": {"n": 6, "w": 20}, "detailed": {"n": 12, "w": 30}}
+_CAPS = {
+    "concise": {"n": 6, "w": 20, "kw": "45-70"},
+    "detailed": {"n": 12, "w": 30, "kw": "70-110"},
+}
 
 _SYSTEM = (
     "You turn meeting transcripts into short, scannable notes. Be selective: report what matters, "

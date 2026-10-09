@@ -35,8 +35,16 @@ def test_prompt_only_uses_braces_for_the_transcript_placeholder():
 def test_detailed_raises_the_caps():
     concise = sections.build_template(["key_points"], "concise")["prompt"]
     detailed = sections.build_template(["key_points"], "detailed")["prompt"]
-    assert "At most 6 bullets" in concise and "20 words" in concise
-    assert "At most 12 bullets" in detailed and "30 words" in detailed
+    assert "At most 6 bullets" in concise and "45-70 words" in concise
+    assert "At most 12 bullets" in detailed and "70-110 words" in detailed
+
+
+def test_key_points_are_complete_explanatory_sentences():
+    concise = sections.build_template(["key_points"], "concise")["prompt"]
+    detailed = sections.build_template(["key_points"], "detailed")["prompt"]
+    assert "complete, self-contained sentence" in concise and "45-70" in concise
+    assert "complete, self-contained sentence" in detailed and "70-110" in detailed
+    assert "20 words" not in concise
 
 
 def test_clean_transcript_drops_fillers_and_repeats_but_keeps_content():
